@@ -1,0 +1,66 @@
+services:
+  # PostgreSQL local service (commented out since we're using local PostgreSQL)
+  # postgres:
+  #   image: postgres:15
+  #   container_name: postgres
+  #   environment:
+  #     POSTGRES_DB: agent_ia
+  #     POSTGRES_USER: agent_user
+  #     POSTGRES_PASSWORD: agent_password
+  #   ports:
+  #     - "55432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://neo:G168652426@localhost:5432/agent_user_ai
+      - REDIS_URL=redis://localhost:6379
+      - OLLAMA_BASE_URL=http://172.17.0.1:11434
+    volumes:
+      - ./backend/app:/app/app
+    depends_on:
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    network_mode: host
+
+  celery_worker:
+    build: ./backend
+    command: sh -c "cd /app && celery -A app.services.tasks:app worker --loglevel=info"
+    volumes:
+      - ./backend/app:/app/app
+    depends_on:
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://neo:G168652426@localhost:5432/agent_user_ai
+      - REDIS_URL=redis://localhost:6379
+      - OLLAMA_BASE_URL=http://172.17.0.1:11434
+    network_mode: host
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

@@ -1,0 +1,135 @@
+# Docker Compose Override Example
+# Copy this file to docker-compose.override.yml and customize as needed
+# This file allows you to override default settings for local development
+
+version: '3.8'
+
+services:
+  # Override backend for local development
+  backend:
+    # Use local code instead of building image
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    # Mount local code for hot reload
+    volumes:
+      - ./backend:/app
+      - /app/venv  # Exclude virtual environment
+      - ./backend/logs:/app/logs  # Mount logs directory
+      - ./backend/uploads:/app/uploads  # Mount uploads directory
+    # Override environment variables for local development
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - DATABASE_ECHO=true
+      - CORS_ORIGINS=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"]
+    # Override command for development
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug
+    # Add health check for development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Override frontend for local development
+  frontend:
+    # Use local code instead of building image
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    # Mount local code for hot reload
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Exclude node_modules
+      - ./frontend/dist:/app/dist  # Mount dist directory
+    # Override environment variables
+    environment:
+      - NODE_ENV=development
+      - VITE_DEBUG=true
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
+    # Override command for development
+    command: npm run dev
+    # Add health check for development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Override database for local development
+  # Uncomment if you want to use containerized PostgreSQL
+  # postgres:
+  #   environment:
+  #     - POSTGRES_DB=agent_ia_dev
+  #     - POSTGRES_USER=dev_user
+  #     - POSTGRES_PASSWORD=dev_password
+  #   ports:
+  #     - "5432:5432"  # Expose to host for local access
+  #   volumes:
+  #     - postgres_data_dev:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U dev_user -d agent_ia_dev"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # Override Redis for local development
+  redis:
+    # Add persistence for development
+    volumes:
+      - redis_data_dev:/data
+    # Override configuration
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    # Add health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Override Celery worker for local development
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+      - /app/venv
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - DATABASE_ECHO=true
+    command: celery -A app.services.tasks:app worker --loglevel=debug --concurrency=2
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Override monitoring for local development
+  prometheus:
+    # Disable in development (optional)
+    profiles:
+      - monitoring
+    # Or customize for development
+    # volumes:
+    #   - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    # ports:
+    #   - "9090:9090"
+
+  grafana:
+    # Disable in development (optional)
+    profiles:
+      - monitoring
+    # Or customize for development
+    # environment:
+    #   - GF_SECURITY_ADMIN_PASSWORD=admin
+    # ports:
+    #   - "3000:3000"
+
+volumes:
+  redis_data_dev:
+  # postgres_data_dev:  # Uncomment if using containerized PostgreSQL 

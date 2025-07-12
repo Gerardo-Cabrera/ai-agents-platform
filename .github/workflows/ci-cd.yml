@@ -1,0 +1,262 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  PYTHON_VERSION: '3.10'
+  NODE_VERSION: '18'
+
+jobs:
+  # Backend Tests
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio pytest-cov
+
+    - name: Run backend tests
+      working-directory: ./backend
+      run: |
+        pytest tests/ -v --cov=app --cov-report=xml --cov-report=html
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+
+  # Frontend Tests
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Run frontend tests
+      working-directory: ./frontend
+      run: npm test -- --coverage --watchAll=false
+
+    - name: Upload frontend coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./frontend/coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+
+  # Integration Tests
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    services:
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        # Backend
+        cd backend
+        pip install -r requirements.txt
+        pip install pytest-asyncio httpx
+        
+        # Frontend
+        cd ../frontend
+        npm ci
+
+    - name: Start backend server
+      working-directory: ./backend
+      run: |
+        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+        sleep 10
+
+    - name: Run integration tests
+      working-directory: ./backend
+      run: |
+        pytest tests/test_integration.py -v
+
+    - name: Test frontend build
+      working-directory: ./frontend
+      run: npm run build
+
+  # Security Analysis
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Bandit security scan
+      uses: python-security/bandit-action@v1
+      with:
+        path: backend
+        level: low
+        format: json
+        output: bandit-report.json
+
+    - name: Run npm audit
+      working-directory: ./frontend
+      run: npm audit --audit-level moderate
+
+  # Code Quality Analysis
+  code-quality:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install Python linting tools
+      run: |
+        pip install flake8 black isort mypy
+
+    - name: Run Python linting
+      working-directory: ./backend
+      run: |
+        flake8 app/ --max-line-length=88 --extend-ignore=E203,W503
+        black --check app/
+        isort --check-only app/
+        mypy app/ --ignore-missing-imports
+
+    - name: Install Node.js linting tools
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Run ESLint
+      working-directory: ./frontend
+      run: npm run lint
+
+  # Docker Build
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [integration-tests, security-scan, code-quality]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/agent-ia-backend:latest
+          ${{ secrets.DOCKER_USERNAME }}/agent-ia-backend:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/agent-ia-frontend:latest
+          ${{ secrets.DOCKER_USERNAME }}/agent-ia-frontend:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Deploy to Railway
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+    - name: Deploy to Railway
+      uses: railway/deploy@v1
+      with:
+        service: ${{ secrets.RAILWAY_SERVICE_NAME }}
+        token: ${{ secrets.RAILWAY_TOKEN }} 

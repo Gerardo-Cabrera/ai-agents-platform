@@ -1,0 +1,86 @@
+fastapi==0.115.13
+uvicorn[standard]==0.32.1
+pydantic==2.10.4
+
+# LangChain y AI (solo versiones compatibles)
+langchain==0.3.26
+langchain-community==0.3.26
+langchain-text-splitters==0.3.8
+langchain-ollama==0.3.3
+# Eliminar langchain-huggingface y langchain-openai si no se usan directamente
+openai==1.14.3
+# deepseek-ai==0.0.1  # El modelo local se usa vía Ollama, no este paquete
+
+# Vector database
+sentence-transformers==4.1.0
+
+# Data processing
+pandas==2.2.2
+numpy==2.2.2
+scikit-learn==1.7.0
+matplotlib==3.10.3
+seaborn==0.13.2
+
+# Audio and vision processing
+transformers==4.52.4
+torch==2.5.0
+torchaudio==2.5.0
+torchvision==0.20.0
+
+# Web scraping and requests
+requests==2.32.3
+beautifulsoup4==4.12.3
+aiofiles==24.1.0
+
+# Celery and Redis
+celery==5.4.0
+redis==5.2.1
+flower==2.0.1
+
+# Audio processing
+SpeechRecognition==3.10.1
+gTTS==2.5.1
+PyAudio==0.2.14
+
+# System monitoring and optimization
+psutil==6.1.0
+schedule==1.2.0
+
+# Development and testing
+pytest==8.2.2
+pytest-asyncio==0.24.0
+pytest-cov==4.1.0
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
+bandit==1.7.5
+
+# Utilities
+python-dotenv==1.0.1
+coloredlogs==15.0.1
+humanfriendly==10.0
+
+# Security and validation
+cryptography==42.0.5
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# Monitoring and metrics
+prometheus-client==0.20.0
+sentry-sdk[fastapi]==1.40.0
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+
+# Websockets
+websockets==12.0
+
+python-multipart==0.0.9
+
+# Para fallback multilingüe
+langdetect==1.0.9
+
+prometheus-fastapi-instrumentator

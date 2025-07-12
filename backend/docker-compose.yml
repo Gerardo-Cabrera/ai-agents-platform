@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/agent_ia
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DEBUG=false
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - agent-ia-network
+
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=agent_ia
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+    networks:
+      - agent-ia-network
+
+  # Redis para caché y Celery
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - agent-ia-network
+
+  # Celery Worker para tareas en segundo plano
+  celery-worker:
+    build: .
+    command: celery -A app.core.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/agent_ia
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-change-in-production
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - agent-ia-network
+
+  # Celery Beat para tareas programadas
+  celery-beat:
+    build: .
+    command: celery -A app.core.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/agent_ia
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-change-in-production
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - agent-ia-network
+
+  # Flower para monitoreo de Celery
+  flower:
+    build: .
+    command: celery -A app.core.celery_app flower --port=5555
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/agent_ia
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "5555:5555"
+    depends_on:
+      - db
+      - redis
+      - celery-worker
+    restart: unless-stopped
+    networks:
+      - agent-ia-network
+
+  # Nginx como proxy reverso
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+      - "443:443"
+    volumes:
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - agent-ia-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  agent-ia-network:
+    driver: bridge

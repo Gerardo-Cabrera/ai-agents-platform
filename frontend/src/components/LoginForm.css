@@ -1,0 +1,188 @@
+/* LoginForm estilos con temas */
+.login-container {
+  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #233347 0%, #1a2636 100%);
+  /* Remove any margin or padding that could cause extra space */
+  margin: 0;
+  padding: 0;
+}
+
+/* Tema claro */
+.login-light {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Tema oscuro */
+.login-dark {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+.login-card {
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  border-radius: 1rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+  background: #232f3e;
+  transition: all 0.3s ease;
+}
+
+/* Tema claro para la tarjeta */
+.login-card-light {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Tema oscuro para la tarjeta */
+.login-card-dark {
+  background: rgba(45, 45, 45, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.login-title {
+  margin-bottom: 2rem !important;
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, var(--light-primary), #0056b3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.login-card-dark .login-title {
+  background: linear-gradient(135deg, var(--dark-primary), #74c0fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Toggle de modo */
+.mode-toggle {
+  margin-bottom: 1.5rem !important;
+  justify-content: center !important;
+}
+
+.mode-toggle .MuiFormControlLabel-label {
+  font-weight: 500 !important;
+  color: var(--light-primary) !important;
+}
+
+.login-card-dark .mode-toggle .MuiFormControlLabel-label {
+  color: var(--dark-primary) !important;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Estilos para inputs de Material-UI */
+.login-input .MuiOutlinedInput-root {
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.login-input-light .MuiOutlinedInput-root {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.login-input-dark .MuiOutlinedInput-root {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.login-input .MuiOutlinedInput-root:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.login-input-dark .MuiOutlinedInput-root:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.login-input .MuiOutlinedInput-root.Mui-focused {
+  transform: translateY(-2px);
+}
+
+/* Estilos para el botón */
+.login-button {
+  margin-top: 1rem !important;
+  padding: 0.75rem !important;
+  border-radius: 0.75rem !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  font-size: 1rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.login-button-light {
+  background: linear-gradient(135deg, var(--light-primary), #0056b3) !important;
+  color: white !important;
+}
+
+.login-button-light:hover {
+  background: linear-gradient(135deg, #0056b3, #004085) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+}
+
+.login-button-dark {
+  background: linear-gradient(135deg, var(--dark-primary), #74c0fc) !important;
+  color: #1a1a1a !important;
+}
+
+.login-button-dark:hover {
+  background: linear-gradient(135deg, #74c0fc, #4dabf7) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(77, 171, 247, 0.3);
+}
+
+/* Mensaje de error */
+.login-error {
+  margin-top: 1rem !important;
+  text-align: center !important;
+  padding: 0.5rem !important;
+  border-radius: 0.5rem !important;
+  background: rgba(220, 53, 69, 0.1) !important;
+  border: 1px solid rgba(220, 53, 69, 0.2) !important;
+}
+
+/* Mensaje de éxito */
+.login-success {
+  margin-top: 1rem !important;
+  text-align: center !important;
+  padding: 0.5rem !important;
+  border-radius: 0.5rem !important;
+  background: rgba(40, 167, 69, 0.1) !important;
+  border: 1px solid rgba(40, 167, 69, 0.2) !important;
+  color: #28a745 !important;
+}
+
+.login-card-dark .login-success {
+  color: #4caf50 !important;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  .login-title {
+    font-size: 1.5rem !important;
+  }
+  
+  .login-button {
+    padding: 0.6rem !important;
+    font-size: 0.9rem !important;
+  }
+} 
